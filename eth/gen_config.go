@@ -31,7 +31,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TrieCleanCache          int
 		TrieDirtyCache          int
 		TrieTimeout             time.Duration
-		Etherbase               common.Address `toml:",omitempty"`
+		Validator               common.Address `toml:",omitempty"`
+		Coinbase                common.Address `toml:",omitempty"`
 		MinerNotify             []string       `toml:",omitempty"`
 		MinerExtraData          hexutil.Bytes  `toml:",omitempty"`
 		MinerGasFloor           uint64
@@ -46,6 +47,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		DocRoot                 string `toml:"-"`
 		EWASMInterpreter        string
 		EVMInterpreter          string
+		Dpos                    bool `toml:"-"`
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -60,7 +62,8 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TrieCleanCache = c.TrieCleanCache
 	enc.TrieDirtyCache = c.TrieDirtyCache
 	enc.TrieTimeout = c.TrieTimeout
-	enc.Etherbase = c.Etherbase
+	enc.Validator = c.Validator
+	enc.Coinbase = c.Coinbase
 	enc.MinerNotify = c.MinerNotify
 	enc.MinerExtraData = c.MinerExtraData
 	enc.MinerGasFloor = c.MinerGasFloor
@@ -68,13 +71,13 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.MinerGasPrice = c.MinerGasPrice
 	enc.MinerRecommit = c.MinerRecommit
 	enc.MinerNoverify = c.MinerNoverify
-	enc.Ethash = c.Ethash
 	enc.TxPool = c.TxPool
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
 	enc.EWASMInterpreter = c.EWASMInterpreter
 	enc.EVMInterpreter = c.EVMInterpreter
+	enc.Dpos = c.Dpos
 	return &enc, nil
 }
 
@@ -93,7 +96,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TrieCleanCache          *int
 		TrieDirtyCache          *int
 		TrieTimeout             *time.Duration
-		Etherbase               *common.Address `toml:",omitempty"`
+		Validator               *common.Address `toml:",omitempty"`
+		Coinbase                *common.Address `toml:",omitempty"`
 		MinerNotify             []string        `toml:",omitempty"`
 		MinerExtraData          *hexutil.Bytes  `toml:",omitempty"`
 		MinerGasFloor           *uint64
@@ -108,6 +112,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		DocRoot                 *string `toml:"-"`
 		EWASMInterpreter        *string
 		EVMInterpreter          *string
+		Dpos                    *bool `toml:"-"`
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -149,8 +154,11 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.TrieTimeout != nil {
 		c.TrieTimeout = *dec.TrieTimeout
 	}
-	if dec.Etherbase != nil {
-		c.Etherbase = *dec.Etherbase
+	if dec.Validator != nil {
+		c.Validator = *dec.Validator
+	}
+	if dec.Coinbase != nil {
+		c.Coinbase = *dec.Coinbase
 	}
 	if dec.MinerNotify != nil {
 		c.MinerNotify = dec.MinerNotify
@@ -173,9 +181,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.MinerNoverify != nil {
 		c.MinerNoverify = *dec.MinerNoverify
 	}
-	if dec.Ethash != nil {
-		c.Ethash = *dec.Ethash
-	}
 	if dec.TxPool != nil {
 		c.TxPool = *dec.TxPool
 	}
@@ -193,6 +198,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.EVMInterpreter != nil {
 		c.EVMInterpreter = *dec.EVMInterpreter
+	}
+	if dec.Dpos != nil {
+		c.Dpos = *dec.Dpos
 	}
 	return nil
 }

@@ -17,34 +17,23 @@
 package eth
 
 import (
-	"github.com/DxChainNetwork/godx/node"
-	"github.com/DxChainNetwork/godx/storage/storageclient"
 	"math/big"
 	"os"
 	"os/user"
-	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/DxChainNetwork/godx/common"
 	"github.com/DxChainNetwork/godx/common/hexutil"
-	"github.com/DxChainNetwork/godx/consensus/ethash"
 	"github.com/DxChainNetwork/godx/core"
 	"github.com/DxChainNetwork/godx/eth/downloader"
 	"github.com/DxChainNetwork/godx/eth/gasprice"
 	"github.com/DxChainNetwork/godx/params"
+	"github.com/DxChainNetwork/godx/storage/storageclient"
 )
 
 // DefaultConfig contains default settings for use on the Ethereum main net.
 var DefaultConfig = Config{
-	SyncMode: downloader.FastSync,
-	Ethash: ethash.Config{
-		CacheDir:       "ethash",
-		CachesInMem:    2,
-		CachesOnDisk:   3,
-		DatasetsInMem:  1,
-		DatasetsOnDisk: 2,
-	},
+	SyncMode:       downloader.FastSync,
 	NetworkId:      1,
 	LightPeers:     100,
 	DatabaseCache:  512,
@@ -72,12 +61,6 @@ func init() {
 		if user, err := user.Current(); err == nil {
 			home = user.HomeDir
 		}
-	}
-	dir := node.DefaultDataDir()
-	if runtime.GOOS == "windows" {
-		DefaultConfig.Ethash.DatasetDir = filepath.Join(home, "AppData", "Ethash")
-	} else {
-		DefaultConfig.Ethash.DatasetDir = filepath.Join(dir, "Ethash")
 	}
 }
 
@@ -109,7 +92,8 @@ type Config struct {
 	TrieTimeout        time.Duration
 
 	// Mining-related options
-	Etherbase      common.Address `toml:",omitempty"`
+	Validator      common.Address `toml:",omitempty"`
+	Coinbase       common.Address `toml:",omitempty"`
 	MinerNotify    []string       `toml:",omitempty"`
 	MinerExtraData []byte         `toml:",omitempty"`
 	MinerGasFloor  uint64
@@ -118,8 +102,7 @@ type Config struct {
 	MinerRecommit  time.Duration
 	MinerNoverify  bool
 
-	// Ethash options
-	Ethash ethash.Config
+	Dpos bool
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig

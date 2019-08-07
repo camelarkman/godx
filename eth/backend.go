@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/DxChainNetwork/godx/consensus/dpos"
+
 	"github.com/DxChainNetwork/godx/accounts"
 	"github.com/DxChainNetwork/godx/common"
 	"github.com/DxChainNetwork/godx/common/hexutil"
@@ -96,7 +98,8 @@ type Ethereum struct {
 
 	miner     *miner.Miner
 	gasPrice  *big.Int
-	etherbase common.Address
+	validator common.Address
+	coinbase  common.Address
 
 	apisOnce       sync.Once
 	registeredAPIs []rpc.API
@@ -107,7 +110,7 @@ type Ethereum struct {
 
 	server *p2p.Server
 
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
 }
 
 // AddLesServer adds a LesServer into full node service
@@ -147,11 +150,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, chainConfig, &config.Ethash, config.MinerNotify, config.MinerNoverify, chainDb),
+		engine:         dpos.New(chainConfig.Dpos, chainDb),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		gasPrice:       config.MinerGasPrice,
-		etherbase:      config.Etherbase,
+		validator:      config.Validator,
+		coinbase:       config.Coinbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 	}
@@ -391,34 +395,65 @@ func (s *Ethereum) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-// Etherbase returns coinbase address
-func (s *Ethereum) Etherbase() (eb common.Address, err error) {
+// Validator retrieves current miner address for dpos engine
+func (s *Ethereum) Validator() (common.Address, error) {
 	s.lock.RLock()
-	etherbase := s.etherbase
+	validator := s.validator
 	s.lock.RUnlock()
 
-	if etherbase != (common.Address{}) {
-		return etherbase, nil
+	if validator != (common.Address{}) {
+		return validator, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			etherbase := accounts[0].Address
+			validator := accounts[0].Address
 
 			s.lock.Lock()
-			s.etherbase = etherbase
+			s.validator = validator
 			s.lock.Unlock()
 
-			log.Info("Etherbase automatically configured", "address", etherbase)
-			return etherbase, nil
+			log.Info("validator automatically configured", "address", validator)
+			return validator, nil
 		}
 	}
-	return common.Address{}, fmt.Errorf("etherbase must be explicitly specified")
+	return common.Address{}, fmt.Errorf("validator must be explicitly specified")
+}
+
+// SetValidator sets given validator into full node
+func (self *Ethereum) SetValidator(validator common.Address) {
+	self.lock.Lock()
+	self.validator = validator
+	self.lock.Unlock()
+}
+
+// Coinbase return the address that will receive block award
+func (s *Ethereum) Coinbase() (eb common.Address, err error) {
+	s.lock.RLock()
+	coinbase := s.coinbase
+	s.lock.RUnlock()
+
+	if coinbase != (common.Address{}) {
+		return coinbase, nil
+	}
+	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
+		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
+			coinbase := accounts[0].Address
+
+			s.lock.Lock()
+			s.coinbase = coinbase
+			s.lock.Unlock()
+
+			log.Info("coinbase automatically configured", "address", coinbase)
+			return coinbase, nil
+		}
+	}
+	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
 }
 
 // isLocalBlock checks whether the specified block is mined
 // by local miner accounts.
 //
-// We regard two types of accounts as local miner account: etherbase
+// We regard two types of accounts as local miner account: coinbase
 // and accounts specified via `txpool.locals` flag.
 func (s *Ethereum) isLocalBlock(block *types.Block) bool {
 	author, err := s.engine.Author(block.Header())
@@ -426,11 +461,11 @@ func (s *Ethereum) isLocalBlock(block *types.Block) bool {
 		log.Warn("Failed to retrieve block author", "number", block.NumberU64(), "hash", block.Hash(), "err", err)
 		return false
 	}
-	// Check whether the given address is etherbase.
+	// Check whether the given address is coinbase.
 	s.lock.RLock()
-	etherbase := s.etherbase
+	coinbase := s.coinbase
 	s.lock.RUnlock()
-	if author == etherbase {
+	if author == coinbase {
 		return true
 	}
 	// Check whether the given address is specified by `txpool.local`
@@ -469,10 +504,10 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 	return s.isLocalBlock(block)
 }
 
-// SetEtherbase sets the mining reward address.
+// SetCoinbase sets the mining reward address.
 func (s *Ethereum) SetCoinbase(coinbase common.Address) {
 	s.lock.Lock()
-	s.etherbase = coinbase
+	s.coinbase = coinbase
 	s.lock.Unlock()
 
 	s.miner.SetCoinbase(coinbase)
@@ -502,15 +537,15 @@ func (s *Ethereum) StartMining(threads int) error {
 		s.txPool.SetGasPrice(price)
 
 		// Configure the local mining address
-		eb, err := s.Etherbase()
+		eb, err := s.Coinbase()
 		if err != nil {
-			log.Error("Cannot start mining without etherbase", "err", err)
-			return fmt.Errorf("etherbase missing: %v", err)
+			log.Error("Cannot start mining without coinbase", "err", err)
+			return fmt.Errorf("coinbase missing: %v", err)
 		}
-		if clique, ok := s.engine.(*clique.Clique); ok {
+		if clique, ok := s.engine.(*dpos.Dpos); ok {
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
-				log.Error("Etherbase account unavailable locally", "err", err)
+				log.Error("coinbase account unavailable locally", "err", err)
 				return fmt.Errorf("signer missing: %v", err)
 			}
 			clique.Authorize(eb, wallet.SignHash)

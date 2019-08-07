@@ -5,15 +5,16 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
-	"github.com/DxChainNetwork/godx/common"
-	"github.com/DxChainNetwork/godx/crypto"
-	"github.com/DxChainNetwork/godx/rlp"
-	"github.com/pkg/errors"
 	"math/big"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/DxChainNetwork/godx/common"
+	"github.com/DxChainNetwork/godx/crypto"
+	"github.com/DxChainNetwork/godx/rlp"
+	"github.com/pkg/errors"
 )
 
 // txJsonData is the data used for testing json.Marshal and json.Unmarshal.
@@ -29,21 +30,21 @@ var txJsonData = []struct {
 	{
 		name:           "ok",
 		json:           `{"nonce":"0x1","gasPrice":"0x1","gas":"0x3","to":"0x0000000000000000000000000000000000000001","value":"0x1","input":"0x6162636466","v":"0x0","r":"0x0","s":"0x0","hash":"0xf66ffe9c5358b305d84192938172f561d920e2cd191602f3a59e3d623eed158c"}`,
-		tx:             NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf")),
+		tx:             NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf")),
 		marshalError:   nil,
 		unmarshalError: nil,
 	},
 	{
 		name:           "unprotected with signature",
 		json:           `{"nonce":"0x1","gasPrice":"0x1","gas":"0x3","to":"0x0000000000000000000000000000000000000001","value":"0x1","input":"0x6162636466","v":"0x1b","r":"0x2","s":"0x2","hash":"0x83b9eb4f5e0d56a01706bca8faecd493554ebc2f0add6e66694884148cd8a308"}`,
-		tx:             NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf")).simpleSignTx(big.NewInt(2), big.NewInt(2), big.NewInt(27)),
+		tx:             NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf")).simpleSignTx(big.NewInt(2), big.NewInt(2), big.NewInt(27)),
 		marshalError:   nil,
 		unmarshalError: nil,
 	},
 	{
 		name:           "protected with signature",
 		json:           `{"nonce":"0x1","gasPrice":"0x1","gas":"0x3","to":"0x0000000000000000000000000000000000000001","value":"0x1","input":"0x6162636466","v":"0x25","r":"0x2","s":"0x2","hash":"0xde8bcc0bdccfb6236b358228fd4749af68bf3712abfaf475f2acd52a93f64d97"}`,
-		tx:             NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf")).simpleSignTx(big.NewInt(2), big.NewInt(2), big.NewInt(37)),
+		tx:             NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf")).simpleSignTx(big.NewInt(2), big.NewInt(2), big.NewInt(37)),
 		marshalError:   nil,
 		unmarshalError: nil,
 	},
@@ -51,6 +52,7 @@ var txJsonData = []struct {
 		name: "corner",
 		json: `{"nonce":"0xffffffffffffffff","gasPrice":"0xebcbee2f77de396ca982b9d98472d938f94","gas":"0xffffffffffffffff","to":"0x0000000000000000000089f1089f1089f1089f10","value":"0xebcbee2f77de396ca982b9d98472d938f94","input":"0x09090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909","v":"0x0","r":"0xebcbee2f77de396ca982b9d98472d938f94","s":"0xebcbee2f77de396ca982b9d98472d938f94","hash":"0xa552f8981b3008ae271b90aa2abfcb0d0ba866cb739c63945932edff0f9ba437"}`,
 		tx: &Transaction{data: txdata{
+			Binary,
 			uint64(18446744073709551615),
 			stringToBigInt("1283798819823798174879817892379812789718932", 10),
 			uint64(18446744073709551615),
@@ -69,7 +71,7 @@ var txJsonData = []struct {
 	{
 		name:           "Missing data",
 		json:           `{"nonce":"0x0","gasPrice":"0x1","gas":"0x0","to":"0x0000000000000000000000000000000000000000","value":"0x0","input":"0x","v":"0x0","r":"0x0","s":"0x0","hash":"0xbf9828b1dd232c0e66a94cb97c19186f8c9c42d9a2d86f811a0bb0cd447c202a"}`,
-		tx:             NewTransaction(uint64(0), common.BytesToAddress([]byte{}), common.Big0, uint64(0), common.Big1, nil),
+		tx:             NewTransaction(Binary, uint64(0), common.BytesToAddress([]byte{}), common.Big0, uint64(0), common.Big1, nil),
 		marshalError:   nil,
 		unmarshalError: nil,
 	},
@@ -173,7 +175,7 @@ func TestTransaction_ChainId(t *testing.T) {
 		{new(big.Int).SetBytes(common.FromHex("de5407e78fb2863ca")), new(big.Int).SetBytes(common.FromHex("6f2a03f3c7d9431d3"))},
 	}
 	for i, test := range tests {
-		tx := NewTransaction(uint64(i), common.Address{1}, common.Big0, 1, common.Big2, []byte("abcdef"))
+		tx := NewTransaction(Binary, uint64(i), common.Address{1}, common.Big0, 1, common.Big2, []byte("abcdef"))
 		tx.data.V = new(big.Int).Set(test.input)
 		if res := tx.ChainId(); res.Cmp(test.want) != 0 {
 			t.Errorf("Input: %d\nGot: %d\nWant: %d", test.input, res, test.want)
@@ -193,7 +195,7 @@ func TestTransaction_Protected(t *testing.T) {
 		{new(big.Int).SetBytes(common.FromHex("de5407e78fb2863ca")), true},
 	}
 	for i, test := range tests {
-		tx := NewTransaction(uint64(i), common.Address{1}, common.Big0, 1, common.Big2, []byte("abcdef"))
+		tx := NewTransaction(Binary, uint64(i), common.Address{1}, common.Big0, 1, common.Big2, []byte("abcdef"))
 		tx.data.V = new(big.Int).Set(test.input)
 		if res := tx.Protected(); res != test.want {
 			t.Errorf("Input: %d\nGot: %v\nWant: %v", test.input, res, test.want)
@@ -376,7 +378,7 @@ func TestTransaction_Size(t *testing.T) {
 // 3. Check function returns wanted value.
 func TestTransaction_AsMessage(t *testing.T) {
 	// Create a signed tx
-	tx := NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf"))
+	tx := NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf"))
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	signer := NewEIP155Signer(big.NewInt(1))
@@ -412,7 +414,7 @@ func TestTransaction_AsMessage(t *testing.T) {
 // 3. Address not the same as the original
 // 4. size, hash, from should have nil value since this a new tx
 func TestTransaction_WithSignature(t *testing.T) {
-	tx := NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf"))
+	tx := NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf"))
 	signer := HomesteadSigner{}
 	sig := common.FromHex("f0f6f18bca1b28cd68e4357452947e021241e9cef27f2e6be0972bb06455bf8ea5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116da0044852b2a670ad")
 	R, S, V, err := signer.SignatureValues(tx, sig)
@@ -447,7 +449,7 @@ func TestTransaction_WithSignature(t *testing.T) {
 
 // TestTransaction_RawSignatureValues test RawSignatureValues
 func TestTransaction_RawSignatureValues(t *testing.T) {
-	tx := NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf"))
+	tx := NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3), common.Big1, []byte("abcdf"))
 	signer := HomesteadSigner{}
 	sig := common.FromHex("f0f6f18bca1b28cd68e4357452947e021241e9cef27f2e6be0972bb06455bf8ea5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116da0044852b2a670ad")
 	wantR, wantS, wantV, err := signer.SignatureValues(tx, sig)
@@ -479,7 +481,7 @@ func TestTransaction_Cost(t *testing.T) {
 		{stringToBigInt("1928398718927389719237981273172897389173298", 10), stringToBigInt("123981927389128389759199283", 10), uint64(18446744073709551615), stringToBigInt("2288991283031419454955550034575261868748665343", 10)},
 	}
 	for i, test := range tests {
-		tx := NewTransaction(uint64(1), common.HexToAddress("0x01"), test.amount, test.gasLimit, test.price, []byte{})
+		tx := NewTransaction(Binary, uint64(1), common.HexToAddress("0x01"), test.amount, test.gasLimit, test.price, []byte{})
 		res := tx.Cost()
 		if res.Cmp(test.want) != 0 {
 			t.Errorf("Transaction.Cost test %d\nGot %v\nWant %v", i, res, test.want)
@@ -740,11 +742,11 @@ func hex2Hash(str string) *common.Hash {
 }
 
 func simpleNewTransactionByNonce(nonce uint64) *Transaction {
-	return newTransaction(nonce, hex2Address("0x01"), new(big.Int), 0, new(big.Int), []byte{})
+	return newTransaction(Binary, nonce, hex2Address("0x01"), new(big.Int), 0, new(big.Int), []byte{})
 }
 
 func simpleNewTransactionByPrice(price *big.Int) *Transaction {
-	return newTransaction(uint64(0), hex2Address("0x01"), new(big.Int), 0, price, []byte{})
+	return newTransaction(Binary, uint64(0), hex2Address("0x01"), new(big.Int), 0, price, []byte{})
 }
 
 func (tx *Transaction) simpleSignTx(R, S, V *big.Int) *Transaction {
@@ -766,14 +768,14 @@ func (tx *Transaction) simpleSignTx(R, S, V *big.Int) *Transaction {
 // The values in those tests are from the Transaction Tests
 // at github.com/ethereum/tests.
 var (
-	emptyTx = NewTransaction(
+	emptyTx = NewTransaction(Binary,
 		0,
 		common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
 		big.NewInt(0), 0, big.NewInt(0),
 		nil,
 	)
 
-	rightvrsTx, _ = NewTransaction(
+	rightvrsTx, _ = NewTransaction(Binary,
 		3,
 		common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
 		big.NewInt(10),
@@ -874,7 +876,7 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 	for start, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		for i := 0; i < 25; i++ {
-			tx, _ := SignTx(NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
+			tx, _ := SignTx(NewTransaction(Binary, uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
 			groups[addr] = append(groups[addr], tx)
 		}
 	}
@@ -932,7 +934,7 @@ func TestTransactionJSON(t *testing.T) {
 		var tx *Transaction
 		switch i % 2 {
 		case 0:
-			tx = NewTransaction(i, common.Address{1}, common.Big0, 1, common.Big2, []byte("abcdef"))
+			tx = NewTransaction(Binary, i, common.Address{1}, common.Big0, 1, common.Big2, []byte("abcdef"))
 		case 1:
 			tx = NewContractCreation(i, common.Big0, 1, common.Big2, []byte("abcdef"))
 		}

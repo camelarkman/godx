@@ -3,12 +3,13 @@ package eth
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"github.com/DxChainNetwork/godx/node"
 	"io/ioutil"
 	"math/big"
 	"sort"
 	"sync"
 	"testing"
+
+	"github.com/DxChainNetwork/godx/node"
 
 	"github.com/DxChainNetwork/godx/common"
 	"github.com/DxChainNetwork/godx/consensus/ethash"
@@ -56,10 +57,9 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 	}
 	ethConf := &Config{
 		Genesis:   core.DeveloperGenesisBlock(15, common.Address{}),
-		Etherbase: common.HexToAddress("0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"),
-		Ethash: ethash.Config{
-			PowMode: ethash.ModeTest,
-		},
+		Validator: common.HexToAddress("0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"),
+		Coinbase:  common.HexToAddress("0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"),
+		Dpos:      true,
 	}
 	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return New(ctx, ethConf) }); err != nil {
 		return nil, nil, err
@@ -136,7 +136,7 @@ func (p *testTxPool) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subs
 
 // newTestTransaction create a new dummy transaction.
 func newTestTransaction(from *ecdsa.PrivateKey, nonce uint64, datasize int) *types.Transaction {
-	tx := types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 100000, big.NewInt(0), make([]byte, datasize))
+	tx := types.NewTransaction(types.Binary, nonce, common.Address{}, big.NewInt(0), 100000, big.NewInt(0), make([]byte, datasize))
 	tx, _ = types.SignTx(tx, types.HomesteadSigner{}, from)
 	return tx
 }

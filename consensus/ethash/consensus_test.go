@@ -20,15 +20,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/DxChainNetwork/godx/common"
-	"github.com/DxChainNetwork/godx/core/state"
-	"github.com/DxChainNetwork/godx/ethdb"
 	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/DxChainNetwork/godx/common"
+	"github.com/DxChainNetwork/godx/core/state"
+	"github.com/DxChainNetwork/godx/ethdb"
 
 	"github.com/DxChainNetwork/godx/common/math"
 	"github.com/DxChainNetwork/godx/core/types"
@@ -311,36 +312,6 @@ func TestUnclesReward(t *testing.T) {
 		}
 	}
 
-}
-
-func ExampleCalcDifficulty() {
-	// Tip: A simple example of mining block and verify. But entire process must be associated with console, miner, transaction and blockchain modules.
-
-	// 1. prepare header
-	diff := CalcDifficulty(params.MainnetChainConfig, uint64(1000), &types.Header{
-		Number:     big.NewInt(1000),
-		Time:       new(big.Int).SetUint64(900),
-		Difficulty: big.NewInt(1),
-	})
-	header := &types.Header{Number: big.NewInt(1001), Difficulty: diff}
-
-	// 2. mine, call Seal method
-	block, err := mineBlock(ethash, header, 100*time.Second)
-	if err != nil || block == nil {
-		fmt.Printf("mine block failed\n")
-		return
-	}
-
-	// 3. verify
-	if err := ethash.VerifySeal(nil, block.Header()); err != nil {
-		fmt.Printf("unexpected block verification error: %v\n", err)
-		return
-	} else {
-		fmt.Printf("Successful Mined")
-	}
-
-	// Output:
-	// Successful Mined
 }
 
 func mineBlock(ethash *Ethash, header *types.Header, timeout time.Duration) (*types.Block, error) {

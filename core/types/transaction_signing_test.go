@@ -65,7 +65,7 @@ func TestSignTxSender(t *testing.T) {
 		FrontierSigner{},
 	}
 	for _, signer := range tests {
-		tx, err := SignTx(NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
+		tx, err := SignTx(NewTransaction(Binary, 0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
 		if err != nil {
 			t.Errorf("Cannot sign transaction: %s", err.Error())
 		}
@@ -181,7 +181,7 @@ func TestEIP155Signer_SenderError(t *testing.T) {
 
 // TestEIP155Signer_SignatureValues test EIP155Signer.SignatureValues
 func TestEIP155Signer_SignatureValues(t *testing.T) {
-	tx := NewTransaction(0, common.HexToAddress("0x123"), new(big.Int), 0, new(big.Int), nil)
+	tx := NewTransaction(Binary, 0, common.HexToAddress("0x123"), new(big.Int), 0, new(big.Int), nil)
 	tests := []struct {
 		input               []byte
 		signer              EIP155Signer
@@ -279,7 +279,7 @@ func TestFrontierSigner_Equal(t *testing.T) {
 
 // TestFrontierSigner_SignatureValues test FrontierSigner.SignatureValues
 func TestFrontierSigner_SignatureValues(t *testing.T) {
-	tx := NewTransaction(0, common.HexToAddress("0x123"), new(big.Int), 0, new(big.Int), nil)
+	tx := NewTransaction(Binary, 0, common.HexToAddress("0x123"), new(big.Int), 0, new(big.Int), nil)
 	fs := FrontierSigner{}
 	tests := []struct {
 		input               []byte
@@ -345,7 +345,7 @@ func TestFrontierSigner_SignatureValuesPanic(t *testing.T) {
 					t.Errorf("FrontierSigner.SignatureValues for input %x does not panic", data)
 				}
 			}()
-			fs.SignatureValues(NewTransaction(0, common.HexToAddress("0x123"), new(big.Int), 0, new(big.Int), nil),
+			fs.SignatureValues(NewTransaction(Binary, 0, common.HexToAddress("0x123"), new(big.Int), 0, new(big.Int), nil),
 				data)
 		}(t, test)
 	}
@@ -409,7 +409,7 @@ func TestEIP155Signing(t *testing.T) {
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	signer := NewEIP155Signer(big.NewInt(18))
-	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
+	tx, err := SignTx(NewTransaction(Binary, 0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -428,7 +428,7 @@ func TestEIP155ChainId(t *testing.T) {
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	signer := NewEIP155Signer(big.NewInt(18))
-	tx, err := SignTx(NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
+	tx, err := SignTx(NewTransaction(Binary, 0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +440,7 @@ func TestEIP155ChainId(t *testing.T) {
 		t.Error("expected chainId to be", signer.chainId, "got", tx.ChainId())
 	}
 
-	tx = NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil)
+	tx = NewTransaction(Binary, 0, addr, new(big.Int), 0, new(big.Int), nil)
 	tx, err = SignTx(tx, HomesteadSigner{}, key)
 	if err != nil {
 		t.Fatal(err)
@@ -498,7 +498,7 @@ func TestEIP155SigningVitalik(t *testing.T) {
 func TestChainId(t *testing.T) {
 	key, _ := defaultTestKey()
 
-	tx := NewTransaction(0, common.Address{}, new(big.Int), 0, new(big.Int), nil)
+	tx := NewTransaction(Binary, 0, common.Address{}, new(big.Int), 0, new(big.Int), nil)
 
 	var err error
 	tx, err = SignTx(tx, NewEIP155Signer(big.NewInt(1)), key)

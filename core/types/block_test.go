@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/DxChainNetwork/godx/common"
 	"github.com/DxChainNetwork/godx/common/hexutil"
 	"github.com/DxChainNetwork/godx/common/math"
 	"github.com/DxChainNetwork/godx/crypto"
 	"github.com/DxChainNetwork/godx/rlp"
-	"math/big"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 //
@@ -494,7 +495,7 @@ var testBlockData = map[string]struct {
 				},
 			},
 			transactions: Transactions{
-				NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3),
+				NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3),
 					common.Big1, []byte("abcdf")),
 			},
 		},
@@ -541,9 +542,10 @@ var testBlockData = map[string]struct {
 				},
 			},
 			transactions: Transactions{
-				NewTransaction(uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3),
+				NewTransaction(Binary, uint64(1), common.BytesToAddress([]byte{1}), common.Big1, uint64(3),
 					common.Big1, []byte("abcdf")),
 				&Transaction{data: txdata{
+					Binary,
 					uint64(18446744073709551615),
 					stringToBigInt("1283798819823798174879817892379812789718932", 10),
 					uint64(18446744073709551615),
@@ -903,7 +905,7 @@ func TestBlock_Size(t *testing.T) {
 			t.Errorf("TestBlock_Size: %s.size\nGot %v\nWant %v", name, size, test.size)
 		}
 		// Append a new transaction
-		newTx := NewTransaction(0, common.Address{}, new(big.Int), 0, new(big.Int), []byte{})
+		newTx := NewTransaction(Binary, 0, common.Address{}, new(big.Int), 0, new(big.Int), []byte{})
 		b.transactions = append(b.transactions, newTx)
 		// Call size again, should return the same size as previous
 		CheckEquality(t, name, "NewSize is not same as original.", b.Size(), size)
@@ -1034,7 +1036,7 @@ func TestBlockEncoding(t *testing.T) {
 	check("Time", block.Time(), big.NewInt(1426516743))
 	check("size", block.Size(), common.StorageSize(len(blockEnc)))
 
-	tx1 := NewTransaction(0, common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"), big.NewInt(10), 50000, big.NewInt(10), nil)
+	tx1 := NewTransaction(Binary, 0, common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"), big.NewInt(10), 50000, big.NewInt(10), nil)
 
 	tx1, _ = tx1.WithSignature(HomesteadSigner{}, common.Hex2Bytes("9bea4c4daac7c7c52e093e6a4c35dbbcf8856f1af7b059ba20253e70848d094f8a8fae537ce25ed8cb5af9adac3f141af69bd515bd2ba031522df09b97dd72b100"))
 	check("len(Transactions)", len(block.Transactions()), 1)

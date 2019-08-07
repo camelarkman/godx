@@ -17,8 +17,12 @@
 package miner
 
 import (
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/DxChainNetwork/godx/consensus"
-	"github.com/DxChainNetwork/godx/consensus/ethash"
+	"github.com/DxChainNetwork/godx/consensus/dpos"
 	"github.com/DxChainNetwork/godx/core"
 	"github.com/DxChainNetwork/godx/core/types"
 	"github.com/DxChainNetwork/godx/core/vm"
@@ -26,15 +30,12 @@ import (
 	"github.com/DxChainNetwork/godx/ethdb"
 	"github.com/DxChainNetwork/godx/event"
 	"github.com/DxChainNetwork/godx/params"
-	"math/big"
-	"testing"
-	"time"
 )
 
 var (
 	// Test chain configurations
-	testTxPoolConfig  core.TxPoolConfig
-	ethashChainConfig *params.ChainConfig
+	testTxPoolConfig core.TxPoolConfig
+	chainConfig      *params.ChainConfig
 
 	// Test accounts
 	testBankKey, _  = crypto.GenerateKey()
@@ -52,11 +53,11 @@ var (
 func init() {
 	testTxPoolConfig = core.DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
-	ethashChainConfig = params.TestChainConfig
+	chainConfig = params.TestChainConfig
 
-	tx1, _ := types.SignTx(types.NewTransaction(0, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
+	tx1, _ := types.SignTx(types.NewTransaction(types.Binary, 0, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
 	pendingTxs = append(pendingTxs, tx1)
-	tx2, _ := types.SignTx(types.NewTransaction(1, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
+	tx2, _ := types.SignTx(types.NewTransaction(types.Binary, 1, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
 	newTxs = append(newTxs, tx2)
 }
 
@@ -73,13 +74,14 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 	var (
 		db    = ethdb.NewMemDatabase()
 		gspec = core.Genesis{
-			Config: chainConfig,
-			Alloc:  core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}},
+			Timestamp: uint64(time.Now().Unix()),
+			Config:    chainConfig,
+			Alloc:     core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}},
 		}
 	)
 
 	switch engine.(type) {
-	case *ethash.Ethash:
+	case *dpos.Dpos:
 	default:
 		t.Fatalf("unexpected consensus engine type: %T", engine)
 	}
@@ -123,12 +125,13 @@ func newTestWorker(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	backend := newTestWorkerBackend(t, chainConfig, engine, blocks)
 	backend.txPool.AddLocals(pendingTxs)
 	w := newWorker(chainConfig, engine, backend, new(event.TypeMux), time.Second, params.GenesisGasLimit, params.GenesisGasLimit, nil)
-	w.setEtherbase(testBankAddress)
+	w.setCoinbase(testBankAddress)
 	return w, backend
 }
 
 func TestPendingStateAndBlockEthash(t *testing.T) {
-	testPendingStateAndBlock(t, ethashChainConfig, ethash.NewFaker())
+	dposEng := dpos.New(chainConfig.Dpos, ethdb.NewMemDatabase())
+	testPendingStateAndBlock(t, chainConfig, dposEng)
 }
 
 func testPendingStateAndBlock(t *testing.T, chainConfig *params.ChainConfig, engine consensus.Engine) {
@@ -157,7 +160,7 @@ func testPendingStateAndBlock(t *testing.T, chainConfig *params.ChainConfig, eng
 }
 
 func TestEmptyWorkEthash(t *testing.T) {
-	testEmptyWork(t, ethashChainConfig, ethash.NewFaker())
+	testEmptyWork(t, chainConfig, &dpos.Dpos{})
 }
 
 func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consensus.Engine) {
@@ -214,10 +217,10 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 }
 
 func TestStreamUncleBlock(t *testing.T) {
-	ethash := ethash.NewFaker()
-	defer ethash.Close()
+	dpos := &dpos.Dpos{}
+	defer dpos.Close()
 
-	w, b := newTestWorker(t, ethashChainConfig, ethash, 1)
+	w, b := newTestWorker(t, chainConfig, dpos, 1)
 	defer w.close()
 
 	var taskCh = make(chan struct{})
@@ -270,7 +273,7 @@ func TestStreamUncleBlock(t *testing.T) {
 }
 
 func TestRegenerateMiningBlockEthash(t *testing.T) {
-	testRegenerateMiningBlock(t, ethashChainConfig, ethash.NewFaker())
+	testRegenerateMiningBlock(t, chainConfig, &dpos.Dpos{})
 }
 
 func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, engine consensus.Engine) {
@@ -331,7 +334,7 @@ func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, en
 }
 
 func TestAdjustIntervalEthash(t *testing.T) {
-	testAdjustInterval(t, ethashChainConfig, ethash.NewFaker())
+	testAdjustInterval(t, chainConfig, &dpos.Dpos{})
 }
 
 func testAdjustInterval(t *testing.T, chainConfig *params.ChainConfig, engine consensus.Engine) {

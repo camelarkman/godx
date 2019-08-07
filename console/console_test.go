@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/DxChainNetwork/godx/common"
-	"github.com/DxChainNetwork/godx/consensus/ethash"
 	"github.com/DxChainNetwork/godx/core"
 	"github.com/DxChainNetwork/godx/eth"
 	"github.com/DxChainNetwork/godx/internal/jsre"
@@ -97,10 +96,9 @@ func newTester(t *testing.T, confOverride func(*eth.Config)) *tester {
 	}
 	ethConf := &eth.Config{
 		Genesis:   core.DeveloperGenesisBlock(15, common.Address{}),
-		Etherbase: common.HexToAddress(testAddress),
-		Ethash: ethash.Config{
-			PowMode: ethash.ModeTest,
-		},
+		Validator: common.HexToAddress(testAddress),
+		Coinbase:  common.HexToAddress(testAddress),
+		Dpos:      true,
 	}
 	if confOverride != nil {
 		confOverride(ethConf)

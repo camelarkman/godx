@@ -1,12 +1,13 @@
 package rawdb
 
 import (
-	"github.com/DxChainNetwork/godx/common"
-	"github.com/DxChainNetwork/godx/ethdb"
-	"github.com/DxChainNetwork/godx/params"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/DxChainNetwork/godx/common"
+	"github.com/DxChainNetwork/godx/ethdb"
+	"github.com/DxChainNetwork/godx/params"
 )
 
 // Test the version storage
@@ -51,7 +52,6 @@ func TestReadChainConfig(t *testing.T) {
 		EIP158Block:         big.NewInt(1844674407370955161),
 		ByzantiumBlock:      big.NewInt(1844674407370955161),
 		ConstantinopleBlock: nil,
-		Ethash:              new(params.EthashConfig),
 	}
 
 	// try to read before add into database, expected a nil value
